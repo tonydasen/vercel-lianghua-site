@@ -6,6 +6,7 @@
     <title>后台管理 - QuantWiki</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
     <style>
         :root {
             --bg-primary: #0a0e1a;
@@ -523,10 +524,10 @@
                         <h3 class="card-title"><i class="fas fa-info-circle"></i> 使用说明</h3>
                     </div>
                     <div style="font-size:14px;color:var(--text-secondary);line-height:1.8;margin-bottom:20px;">
-                        <p><strong>支持的文件格式：</strong> .txt, .md, .html</p>
+                        <p><strong>支持的文件格式：</strong> .txt, .md, .html, .docx (Word)</p>
                         <p><strong>文件命名格式：</strong> <code>文章标题_分类编号_日期_编号.txt</code></p>
-                        <p><strong>示例：</strong> <code>量化交易基本知识的介绍_006_20260501_000807.txt</code></p>
-                        <p><strong>注意：</strong> DOCX 文件请先转换为 TXT 或 HTML 格式再上传</p>
+                        <p><strong>示例：</strong> <code>量化交易基本知识的介绍_006_20260501_000807.docx</code></p>
+                        <p><strong>作者识别：</strong> 文章中包含 <code>作者：xxx</code> 时会自动使用该作者名，否则使用默认作者</p>
                         <p><strong>发布方式：</strong> 配置 GitHub Token 后可点击「直接发布」自动提交到仓库</p>
                     </div>
                 </div>
@@ -572,8 +573,8 @@
                     
                     <div class="form-group" style="margin-top:20px;">
                         <label class="form-label">选择文件（可多选）</label>
-                        <input type="file" id="batch-files" class="form-input" multiple accept=".txt,.md,.html" style="padding:20px;border:2px dashed var(--border-color);background:var(--bg-secondary);cursor:pointer;">
-                        <div class="form-hint">支持同时选择多个文件，文件内容将自动读取</div>
+                        <input type="file" id="batch-files" class="form-input" multiple accept=".txt,.md,.html,.docx" style="padding:20px;border:2px dashed var(--border-color);background:var(--bg-secondary);cursor:pointer;">
+                        <div class="form-hint">支持 .txt, .md, .html, .docx 格式，可同时选择多个文件</div>
                     </div>
                     
                     <div id="batch-preview" class="hidden" style="margin-top:20px;">
@@ -1196,13 +1197,34 @@
             };
         }
 
-        // 读取文件内容
+        // 读取文件内容（支持 txt/md/html/docx）
         function readFile(file) {
             return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = (e) => resolve(e.target.result);
-                reader.onerror = (e) => reject(e);
-                reader.readAsText(file, 'UTF-8');
+                // 如果是 docx 文件，使用 mammoth 解析
+                if (file.name.toLowerCase().endsWith('.docx')) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const arrayBuffer = e.target.result;
+                        mammoth.convertToHtml({ arrayBuffer: arrayBuffer }, {
+                            styleMap: [
+                                "p[style-name='Heading 1'] => h3",
+                                "p[style-name='Heading 2'] => h3",
+                                "p[style-name='Heading 3'] => h3",
+                                "code => pre:has(> code)"
+                            ]
+                        })
+                        .then(result => resolve(result.value))
+                        .catch(err => reject(err));
+                    };
+                    reader.onerror = (e) => reject(e);
+                    reader.readAsArrayBuffer(file);
+                } else {
+                    // 普通文本文件
+                    const reader = new FileReader();
+                    reader.onload = (e) => resolve(e.target.result);
+                    reader.onerror = (e) => reject(e);
+                    reader.readAsText(file, 'UTF-8');
+                }
             });
         }
 
@@ -1253,6 +1275,18 @@
             return '';
         }
 
+        // 从内容中提取作者（匹配 "作者：xxx" 或 "作者:xxx" 格式）
+        function extractAuthor(content) {
+            // 移除HTML标签后搜索
+            const text = content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
+            // 匹配各种格式的作者信息：作者：xxx / 作者: xxx / 作者 xxx
+            const match = text.match(/作者\s*[：:]\s*([^\n\r]+?)(?:\s{2,}|\n|$)/);
+            if (match) {
+                return match[1].trim();
+            }
+            return null;
+        }
+
         // 文件选择事件
         document.getElementById('batch-files').addEventListener('change', async function(e) {
             const files = Array.from(e.target.files);
@@ -1295,6 +1329,7 @@
                     const htmlContent = convertToHTML(content);
                     const description = extractDescription(content);
                     const codePreview = extractCodePreview(content);
+                    const extractedAuthor = extractAuthor(content);
 
                     const article = {
                         title: parsed.title,
@@ -1306,7 +1341,7 @@
                         tagIcon: catInfo.tagIcon,
                         description: description,
                         content: htmlContent,
-                        author: batchAuthor,
+                        author: extractedAuthor || batchAuthor,
                         date: parsed.date,
                         views: Math.floor(Math.random() * 1000) + 100,
                         readTime: batchReadTime,

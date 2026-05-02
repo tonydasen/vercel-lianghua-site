@@ -1318,7 +1318,8 @@
                         listItems.length = 0;
                         inList = false;
                     }
-                    contentParagraphs.push('<p></p>');
+                    // 空段落添加间距，用于分隔段落
+                    contentParagraphs.push('<p style="margin-bottom:1em;">&nbsp;</p>');
                     continue;
                 }
                 
@@ -1333,7 +1334,7 @@
                 
                 // 如果不是列表项但有列表在进行，先结束列表
                 if (inList && listItems.length > 0) {
-                    contentParagraphs.push('<ul>' + listItems.join('') + '</ul>');
+                    contentParagraphs.push('<ul style="margin-bottom:1em;padding-left:2em;">' + listItems.join('') + '</ul>');
                     listItems.length = 0;
                     inList = false;
                 }
@@ -1341,21 +1342,21 @@
                 // 检查是否是 ## 小标题
                 if (text.startsWith('##')) {
                     const subtitle = processInlineMarkdown(text.replace(/^##+\s*/, '').trim());
-                    contentParagraphs.push(`<h4>${subtitle}</h4>`);
+                    contentParagraphs.push(`<h4 style="margin-top:1.5em;margin-bottom:0.8em;">${subtitle}</h4>`);
                 } else if (text.startsWith('#')) {
                     // 一级标题，设为 h3
                     const subtitle = processInlineMarkdown(text.replace(/^#+\s*/, '').trim());
-                    contentParagraphs.push(`<h3>${subtitle}</h3>`);
+                    contentParagraphs.push(`<h3 style="margin-top:1.5em;margin-bottom:0.8em;">${subtitle}</h3>`);
                 } else {
-                    // 普通段落，处理内联 Markdown
+                    // 普通段落，处理内联 Markdown，添加行间距样式
                     const processedText = processInlineMarkdown(text);
-                    contentParagraphs.push(`<p>${processedText}</p>`);
+                    contentParagraphs.push(`<p style="margin-bottom:1em;line-height:1.8;">${processedText}</p>`);
                 }
             }
             
             // 处理末尾可能未结束的列表
             if (inList && listItems.length > 0) {
-                contentParagraphs.push('<ul>' + listItems.join('') + '</ul>');
+                contentParagraphs.push('<ul style="margin-bottom:1em;padding-left:2em;">' + listItems.join('') + '</ul>');
             }
             
             return {

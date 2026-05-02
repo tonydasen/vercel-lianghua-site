@@ -1302,55 +1302,68 @@
                 }
             }
             
-            // 处理剩余内容
+            // 处理剩余内容 - 保留 Word 的原始段落结构（按 <br> 拆分）
             const contentParagraphs = [];
             const listItems = [];
             let inList = false;
             
             for (let i = contentStartIndex; i < paragraphs.length; i++) {
                 const p = paragraphs[i];
-                let text = p.textContent.trim();
+                const fullText = p.textContent.trim();
                 
-                if (!text) {
-                    // 空行，结束列表
+                if (!fullText) {
+                    // 空段落 - 添加空行分隔
                     if (inList && listItems.length > 0) {
-                        contentParagraphs.push('<ul>' + listItems.join('') + '</ul>');
+                        contentParagraphs.push('<ul style="margin-bottom:1em;padding-left:2em;">' + listItems.join('') + '</ul>');
                         listItems.length = 0;
                         inList = false;
                     }
-                    // 空段落添加间距，用于分隔段落
                     contentParagraphs.push('<p style="margin-bottom:1em;">&nbsp;</p>');
                     continue;
                 }
                 
-                // 检查是否是列表项（- 开头或 * 开头）
-                const listMatch = text.match(/^[-\*]\s+(.+)$/);
-                if (listMatch) {
-                    const itemText = processInlineMarkdown(listMatch[1]);
-                    listItems.push(`<li>${itemText}</li>`);
-                    inList = true;
-                    continue;
-                }
+                // 获取原始 HTML 内容，保留 <br> 标签信息
+                const innerHTML = p.innerHTML;
                 
-                // 如果不是列表项但有列表在进行，先结束列表
-                if (inList && listItems.length > 0) {
-                    contentParagraphs.push('<ul style="margin-bottom:1em;padding-left:2em;">' + listItems.join('') + '</ul>');
-                    listItems.length = 0;
-                    inList = false;
-                }
+                // 按 <br> 拆分，保留 Word 中的换行（软回车）
+                const segments = innerHTML.split(/<br\s*\/?>/i);
                 
-                // 检查是否是 ## 小标题
-                if (text.startsWith('##')) {
-                    const subtitle = processInlineMarkdown(text.replace(/^##+\s*/, '').trim());
-                    contentParagraphs.push(`<h4 style="margin-top:1.5em;margin-bottom:0.8em;">${subtitle}</h4>`);
-                } else if (text.startsWith('#')) {
-                    // 一级标题，设为 h3
-                    const subtitle = processInlineMarkdown(text.replace(/^#+\s*/, '').trim());
-                    contentParagraphs.push(`<h3 style="margin-top:1.5em;margin-bottom:0.8em;">${subtitle}</h3>`);
-                } else {
-                    // 普通段落，处理内联 Markdown，添加行间距样式
-                    const processedText = processInlineMarkdown(text);
-                    contentParagraphs.push(`<p style="margin-bottom:1em;line-height:1.8;">${processedText}</p>`);
+                for (const segment of segments) {
+                    // 移除 HTML 标签，获取纯文本
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = segment;
+                    let text = tempDiv.textContent.trim();
+                    
+                    if (!text) continue;
+                    
+                    // 检查是否是列表项
+                    const listMatch = text.match(/^[-\*]\s+(.+)$/);
+                    if (listMatch) {
+                        const itemText = processInlineMarkdown(listMatch[1]);
+                        listItems.push(`<li style="margin-bottom:0.5em;">${itemText}</li>`);
+                        inList = true;
+                        continue;
+                    }
+                    
+                    // 如果不是列表项但有列表在进行，先结束列表
+                    if (inList && listItems.length > 0) {
+                        contentParagraphs.push('<ul style="margin-bottom:1em;padding-left:2em;">' + listItems.join('') + '</ul>');
+                        listItems.length = 0;
+                        inList = false;
+                    }
+                    
+                    // 检查是否是 ## 小标题
+                    if (text.startsWith('##')) {
+                        const subtitle = processInlineMarkdown(text.replace(/^##+\s*/, '').trim());
+                        contentParagraphs.push(`<h4 style="margin-top:1.5em;margin-bottom:0.8em;">${subtitle}</h4>`);
+                    } else if (text.startsWith('#')) {
+                        const subtitle = processInlineMarkdown(text.replace(/^#+\s*/, '').trim());
+                        contentParagraphs.push(`<h3 style="margin-top:1.5em;margin-bottom:0.8em;">${subtitle}</h3>`);
+                    } else {
+                        // 普通段落
+                        const processedText = processInlineMarkdown(text);
+                        contentParagraphs.push(`<p style="margin-bottom:1em;line-height:1.8;">${processedText}</p>`);
+                    }
                 }
             }
             

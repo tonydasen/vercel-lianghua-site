@@ -1,0 +1,283 @@
+[
+  {
+    "id": "1",
+    "title": "双均线交叉策略：从理论到实战完整指南",
+    "category": "strategy",
+    "subcategory": "趋势跟踪",
+    "difficulty": 2,
+    "tag": "策略",
+    "tagClass": "tag-strategy",
+    "tagIcon": "fa-chess",
+    "description": "深入讲解移动平均线交叉策略的原理、参数优化方法，以及如何在Backtrader和vn.py中实现完整的回测与实盘交易流程。",
+    "content": "<p>双均线交叉策略是最经典的技术分析策略之一。其核心思想是通过两条不同周期的移动平均线（一条短期、一条长期）的交叉来产生交易信号。</p><h3>策略原理</h3><p>当短期均线上穿长期均线时（金叉），视为买入信号；当短期均线下穿长期均线时（死叉），视为卖出信号。</p><h3>Python实现</h3><pre><code>import backtrader as bt
+
+class DualMAStrategy(bt.Strategy):
+    params = (('fast', 10), ('slow', 30))
+    
+    def __init__(self):
+        self.fast_ma = bt.ind.SMA(period=self.p.fast)
+        self.slow_ma = bt.ind.SMA(period=self.p.slow)
+        self.crossover = bt.ind.CrossOver(self.fast_ma, self.slow_ma)
+    
+    def next(self):
+        if not self.position:
+            if self.crossover > 0:
+                self.buy()
+        elif self.crossover < 0:
+            self.sell()</code></pre><h3>参数优化</h3><p>通过网格搜索或遗传算法对均线周期进行优化，找到最优参数组合。注意避免过度拟合。</p>",
+    "author": "量化小助手",
+    "date": "2026-04-28",
+    "views": 3842,
+    "readTime": "15分钟",
+    "codePreview": "class DualMAStrategy(bt.Strategy):
+    params = (('fast', 10), ('slow', 30))
+    def __init__(self):
+        self.fast_ma = bt.ind.SMA(period=self.p.fast)
+        self.slow_ma = bt.ind.SMA(period=self.p.slow)",
+    "featured": true
+  },
+  {
+    "id": "2",
+    "title": "VaR与预期亏损：现代风险度量模型详解",
+    "category": "risk",
+    "subcategory": "风险度量",
+    "difficulty": 3,
+    "tag": "风控",
+    "tagClass": "tag-risk",
+    "tagIcon": "fa-shield-halved",
+    "description": "系统讲解风险价值(VaR)的历史模拟法、参数法和蒙特卡洛模拟法，以及预期亏损(ES)作为VaR补充指标的优势与计算方法。",
+    "content": "<p>风险价值（Value at Risk, VaR）是量化金融领域最重要的风险度量工具之一，它回答了一个核心问题：在给定的置信水平下，投资组合在未来特定时间内的最大可能损失是多少？</p><h3>VaR的三种计算方法</h3><h4>1. 历史模拟法</h4><p>直接使用历史收益率数据，通过分位数计算VaR。优点是无需假设收益率分布，缺点是对历史数据依赖性强。</p><h4>2. 参数法（方差-协方差法）</h4><p>假设收益率服从正态分布，利用均值和标准差计算VaR。计算简单但对分布假设敏感。</p><h4>3. 蒙特卡洛模拟法</h4><p>通过随机模拟生成大量可能的价格路径，计算组合价值的分布。灵活性高但计算量大。</p><h3>预期亏损（ES）</h3><p>ES（Expected Shortfall）又称CVaR，衡量的是超过VaR阈值条件下的平均损失，比VaR更能反映尾部风险。</p>",
+    "author": "风控专家",
+    "date": "2026-04-25",
+    "views": 2156,
+    "readTime": "22分钟",
+    "featured": true
+  },
+  {
+    "id": "3",
+    "title": "LSTM神经网络在股价预测中的应用实践",
+    "category": "ml",
+    "subcategory": "深度学习",
+    "difficulty": 3,
+    "tag": "ML",
+    "tagClass": "tag-ml",
+    "tagIcon": "fa-brain",
+    "description": "使用PyTorch构建LSTM模型进行多步股价预测，涵盖特征工程、序列建模、过拟合防止以及与传统时间序列模型的对比分析。",
+    "content": "<p>长短期记忆网络（LSTM）是一种特殊的循环神经网络（RNN），特别适合处理时间序列数据。在金融领域，LSTM被广泛应用于股价预测、波动率建模等任务。</p><h3>LSTM核心结构</h3><p>LSTM通过引入遗忘门、输入门和输出门三个控制机制，有效解决了传统RNN的梯度消失问题。</p><h3>特征工程</h3><p>除了原始价格数据，还可以加入技术指标（RSI、MACD、布林带）、宏观经济指标、市场情绪指标等作为输入特征。</p><h3>过拟合防止</h3><p>使用Dropout、早停（Early Stopping）、正则化等技术防止模型在训练数据上过拟合。</p>",
+    "author": "AI量化研究员",
+    "date": "2026-04-22",
+    "views": 5231,
+    "readTime": "30分钟",
+    "featured": true
+  },
+  {
+    "id": "4",
+    "title": "现代投资组合理论(MPT)与有效前沿",
+    "category": "theory",
+    "subcategory": "投资组合",
+    "difficulty": 1,
+    "tag": "理论",
+    "tagClass": "tag-theory",
+    "tagIcon": "fa-graduation-cap",
+    "description": "从马科维茨均值-方差模型出发，讲解如何构建最优投资组合，理解夏普比率、资本市场线等核心概念。",
+    "content": "<p>现代投资组合理论（Modern Portfolio Theory, MPT）由Harry Markowitz于1952年提出，是金融学的奠基理论之一。</p><h3>核心思想</h3><p>投资者不应只关注单一资产的预期收益，而应考虑资产之间的相关性，通过分散投资来优化风险收益比。</p><h3>有效前沿</h3><p>在给定风险水平下，能够提供最高预期收益的投资组合集合称为有效前沿。投资者应选择在有效前沿上的组合。</p><h3>夏普比率</h3><p>Sharpe Ratio = (E[Rp] - Rf) / σp，衡量每承担一单位风险所获得的超额收益。</p>",
+    "author": "金融基础课",
+    "date": "2026-04-20",
+    "views": 4678,
+    "readTime": "12分钟",
+    "featured": true
+  },
+  {
+    "id": "5",
+    "title": "2026年主流量化回测框架对比：Backtrader vs vn.py vs Zipline",
+    "category": "tool",
+    "subcategory": "回测框架",
+    "difficulty": 2,
+    "tag": "工具",
+    "tagClass": "tag-tool",
+    "tagIcon": "fa-toolbox",
+    "description": "全面对比三大量化回测框架的功能特性、性能表现、社区生态，帮助你选择最适合自己需求的开发工具。",
+    "content": "<p>选择合适的回测框架是量化交易开发的第一步。本文从多个维度对比三大主流框架。</p><h3>Backtrader</h3><p>Python原生框架，学习曲线平缓，社区活跃，文档完善。适合个人研究和小规模策略开发。</p><h3>vn.py</h3><p>国产开源框架，支持实盘交易，社区以中文为主。适合国内期货、股票实盘交易。</p><h3>Zipline</h3><p>Quantopian开源框架，与PyData生态集成好。但已停止维护，新项目不建议使用。</p>",
+    "author": "工具测评官",
+    "date": "2026-04-18",
+    "views": 6892,
+    "readTime": "18分钟",
+    "featured": true
+  },
+  {
+    "id": "6",
+    "title": "量化数据源选型指南：Tushare、AKShare、Yahoo Finance深度对比",
+    "category": "data",
+    "subcategory": "数据获取",
+    "difficulty": 2,
+    "tag": "数据",
+    "tagClass": "tag-data",
+    "tagIcon": "fa-database",
+    "description": "分析各数据源的覆盖范围、更新频率、数据质量、费用结构，以及在实际回测中需要注意的数据陷阱。",
+    "content": "<p>数据是量化交易的基石。选择合适的数据源直接影响策略回测的准确性和实盘表现。</p><h3>Tushare</h3><p>国内最专业的金融数据接口，覆盖A股、期货、期权、基金等。Pro版需要积分，数据质量高。</p><h3>AKShare</h3><p>基于Python的开源财经数据接口库，完全免费。数据来源于东方财富、新浪财经等公开渠道。</p><h3>Yahoo Finance</h3><p>免费获取美股、港股、A股历史数据。通过yfinance库调用，适合海外市场和学术研究。</p>",
+    "author": "数据工程师",
+    "date": "2026-04-15",
+    "views": 3445,
+    "readTime": "14分钟",
+    "featured": false
+  },
+  {
+    "id": "7",
+    "title": "配对交易：统计套利策略的完整实现",
+    "category": "strategy",
+    "subcategory": "统计套利",
+    "difficulty": 3,
+    "tag": "策略",
+    "tagClass": "tag-strategy",
+    "tagIcon": "fa-chess",
+    "description": "从协整检验到交易信号生成，完整实现基于均值回归的配对交易策略，包含动态对冲比率计算和止损机制设计。",
+    "content": "<p>配对交易（Pairs Trading）是一种经典的统计套利策略，由Morgan Stanley的Nunzio Tartaglia团队在1980年代开发。</p><h3>策略原理</h3><p>找到两只历史价格走势高度相关的股票，当价差偏离历史均值时做空高价股、做多低价股，待价差回归时平仓获利。</p><h3>协整检验</h3><p>使用Engle-Granger两步法或Johansen检验验证两只股票是否存在协整关系。</p><h3>交易信号</h3><p>当标准化价差（Z-Score）超过阈值（如±2）时开仓，回归至均值（如±0.5）时平仓。</p>",
+    "author": "套利策略师",
+    "date": "2026-04-12",
+    "views": 2987,
+    "readTime": "25分钟",
+    "featured": false
+  },
+  {
+    "id": "8",
+    "title": "Black-Scholes期权定价模型：推导、实现与希腊字母",
+    "category": "theory",
+    "subcategory": "期权定价",
+    "difficulty": 2,
+    "tag": "理论",
+    "tagClass": "tag-theory",
+    "tagIcon": "fa-graduation-cap",
+    "description": "从随机微分方程出发推导BS公式，Python实现定价计算，并深入讲解Delta、Gamma、Theta、Vega等风险指标。",
+    "content": "<p>Black-Scholes模型是期权定价领域最重要的理论成果，为金融衍生品市场奠定了数学基础。</p><h3>模型假设</h3><p>标的资产价格服从几何布朗运动、无风险利率恒定、无交易成本、可以连续对冲等。</p><h3>BS公式</h3><p>C = S₀N(d₁) - Ke^(-rT)N(d₂)</p><h3>希腊字母</h3><p>Delta（价格敏感度）、Gamma（Delta变化率）、Theta（时间衰减）、Vega（波动率敏感度）、Rho（利率敏感度）。</p>",
+    "author": "期权研究员",
+    "date": "2026-04-10",
+    "views": 3102,
+    "readTime": "28分钟",
+    "featured": false
+  },
+  {
+    "id": "9",
+    "title": "动量策略：股票与外汇市场的动量效应实证",
+    "category": "strategy",
+    "subcategory": "趋势跟踪",
+    "difficulty": 2,
+    "tag": "策略",
+    "tagClass": "tag-strategy",
+    "tagIcon": "fa-chess",
+    "description": "基于Jegadeesh & Titman经典研究，构建跨市场动量因子，分析不同持有期与形成期的最优参数组合。",
+    "content": "<p>动量效应（Momentum Effect）是金融市场中最重要的异象之一，指过去表现好的股票在未来一段时间内继续表现好。</p><h3>经典研究</h3><p>Jegadeesh & Titman (1993) 发现过去3-12个月收益率最高的股票组合在未来3-12个月仍能跑赢市场。</p><h3>跨市场应用</h3><p>动量效应不仅存在于股票市场，在外汇、商品、债券等市场也有显著表现。</p>",
+    "author": "策略研究员",
+    "date": "2026-04-05",
+    "views": 2456,
+    "readTime": "20分钟",
+    "featured": false
+  },
+  {
+    "id": "10",
+    "title": "Bollinger Bands均值回归策略优化",
+    "category": "strategy",
+    "subcategory": "均值回归",
+    "difficulty": 3,
+    "tag": "策略",
+    "tagClass": "tag-strategy",
+    "tagIcon": "fa-chess",
+    "description": "在传统布林带策略基础上引入自适应波动率调整和成交量过滤，提升策略在震荡市中的表现。",
+    "content": "<p>布林带（Bollinger Bands）由John Bollinger于1980年代发明，是技术分析中最常用的工具之一。</p><h3>传统策略</h3><p>价格触及下轨时买入，触及上轨时卖出。简单直观但在趋势市中表现不佳。</p><h3>优化方向</h3><p>1. 自适应带宽：根据市场波动率动态调整带宽倍数<br>2. 成交量过滤：仅在成交量放大时确认信号<br>3. 多时间框架确认</p>",
+    "author": "技术分析师",
+    "date": "2026-04-02",
+    "views": 1876,
+    "readTime": "18分钟",
+    "featured": false
+  },
+  {
+    "id": "11",
+    "title": "Backtrader入门：从零搭建量化回测系统",
+    "category": "tool",
+    "subcategory": "回测框架",
+    "difficulty": 1,
+    "tag": "工具",
+    "tagClass": "tag-tool",
+    "tagIcon": "fa-toolbox",
+    "description": "Backtrader框架的核心概念、数据加载、策略编写、分析器使用和可视化输出的完整教程。",
+    "content": "<p>Backtrader是Python生态中最流行的量化回测框架之一，以其灵活性和易用性著称。</p><h3>核心概念</h3><p>Cerebro（大脑）：回测引擎<br>Data Feed：数据源<br>Strategy：策略<br>Analyzer：分析器<br>Observer：观察者</p><h3>快速开始</h3><pre><code>import backtrader as bt
+
+cerebro = bt.Cerebro()
+cerebro.addstrategy(MyStrategy)
+data = bt.feeds.YahooFinanceData(dataname='AAPL')
+cerebro.adddata(data)
+cerebro.run()</code></pre>",
+    "author": "Backtrader社区",
+    "date": "2026-03-28",
+    "views": 8234,
+    "readTime": "25分钟",
+    "featured": false
+  },
+  {
+    "id": "12",
+    "title": "vn.py实盘交易部署指南：CTP接口配置与风控",
+    "category": "tool",
+    "subcategory": "实盘交易",
+    "difficulty": 2,
+    "tag": "工具",
+    "tagClass": "tag-tool",
+    "tagIcon": "fa-toolbox",
+    "description": "vn.py框架连接CTP期货接口的完整配置流程，包含账户设置、合约订阅、订单管理和风险控制模块。",
+    "content": "<p>vn.py是国内最成熟的开源量化交易框架，支持股票、期货、期权、外汇等多种交易品种。</p><h3>CTP接口配置</h3><p>1. 安装vn.py和CTP API<br>2. 配置交易账户信息<br>3. 连接行情和交易网关<br>4. 订阅合约并启动策略</p><h3>风控模块</h3><p>vn.py内置了完善的风控系统，包括流控、撤单限制、持仓限制、资金限制等。</p>",
+    "author": "vn.py团队",
+    "date": "2026-03-25",
+    "views": 5678,
+    "readTime": "30分钟",
+    "featured": false
+  },
+  {
+    "id": "13",
+    "title": "量化交易中常见的10个认知误区",
+    "category": "theory",
+    "subcategory": "交易心理",
+    "difficulty": 1,
+    "tag": "理论",
+    "tagClass": "tag-theory",
+    "tagIcon": "fa-graduation-cap",
+    "description": "社区用户总结的量化交易新手最常犯的错误，包括过拟合、未来函数、幸存者偏差等核心问题。",
+    "content": "<p>量化交易看似简单，实则充满陷阱。以下是新手最常犯的10个错误：</p><h3>1. 过拟合</h3><p>在历史数据上表现完美，实盘一塌糊涂。解决方法是样本外测试、滚动回测。</p><h3>2. 未来函数</h3><p>使用了未来信息来生成交易信号。典型例子是用当天收盘价决定当天买入。</p><h3>3. 幸存者偏差</h3><p>只使用现存的股票数据回测，忽略了已退市股票。导致策略表现被高估。</p><h3>4. 交易成本忽略</h3><p>未考虑滑点、手续费、冲击成本。高频策略尤其敏感。</p><h3>5. 数据窥探偏差</h3><p>反复测试同一数据集直到找到"显著"结果。需要严格的统计检验。</p>",
+    "author": "社区精选",
+    "date": "2026-04-30",
+    "views": 12450,
+    "readTime": "15分钟",
+    "featured": false
+  },
+  {
+    "id": "14",
+    "title": "因子投资：从Fama-French五因子到另类因子",
+    "category": "theory",
+    "subcategory": "因子模型",
+    "difficulty": 2,
+    "tag": "理论",
+    "tagClass": "tag-theory",
+    "tagIcon": "fa-graduation-cap",
+    "description": "系统讲解因子投资理论框架，包括经典因子、因子检验方法和因子组合构建技术。",
+    "content": "<p>因子投资（Factor Investing）是量化投资的核心方法论，通过识别和暴露于特定的风险因子来获取超额收益。</p><h3>Fama-French五因子模型</h3><p>市场因子(MKT)、规模因子(SMB)、价值因子(HML)、盈利因子(RMW)、投资因子(CMA)。</p><h3>另类因子</h3><p>动量因子、质量因子、低波动因子、流动性因子、情绪因子等。</p>",
+    "author": "因子研究员",
+    "date": "2026-04-08",
+    "views": 3890,
+    "readTime": "22分钟",
+    "featured": false
+  },
+  {
+    "id": "15",
+    "title": "高频交易：市场微观结构与市场 maker 策略",
+    "category": "strategy",
+    "subcategory": "高频交易",
+    "difficulty": 3,
+    "tag": "策略",
+    "tagClass": "tag-strategy",
+    "tagIcon": "fa-chess",
+    "description": "深入讲解订单簿动态、市场冲击模型、以及做市商策略的设计与实现。",
+    "content": "<p>高频交易（HFT）是量化交易中最具技术挑战性的领域，对延迟、算法精度和系统稳定性要求极高。</p><h3>订单簿动态</h3><p>理解限价订单簿（LOB）的结构和动态变化是HFT的基础。包括订单流、价格发现、流动性提供等。</p><h3>做市商策略</h3><p>在买卖双边同时报价，赚取买卖价差（Bid-Ask Spread）。核心挑战是库存管理和逆向选择风险。</p>",
+    "author": "HFT工程师",
+    "date": "2026-03-20",
+    "views": 4521,
+    "readTime": "35分钟",
+    "featured": false
+  }
+]

@@ -1268,6 +1268,9 @@
             for (let i = 0; i < paragraphs.length; i++) {
                 let text = paragraphs[i].textContent.trim();
                 if (text) {
+                    // 去掉标题开头的 # 标记
+                    text = text.replace(/^#+\s*/, '').trim();
+                    
                     // 检查标题行是否包含 "作者：" 或 "作者:"
                     const authorInTitleMatch = text.match(/(.*?)作者\s*[：:]\s*(.+)$/);
                     if (authorInTitleMatch) {

@@ -525,9 +525,13 @@
                     </div>
                     <div style="font-size:14px;color:var(--text-secondary);line-height:1.8;margin-bottom:20px;">
                         <p><strong>支持的文件格式：</strong> .txt, .md, .html, .docx (Word)</p>
-                        <p><strong>文件命名格式：</strong> <code>文章标题_分类编号_日期_编号.txt</code></p>
-                        <p><strong>示例：</strong> <code>量化交易基本知识的介绍_006_20260501_000807.docx</code></p>
-                        <p><strong>作者识别：</strong> 文章中包含 <code>作者：xxx</code> 时会自动使用该作者名，否则使用默认作者</p>
+                        <p><strong>Word文档格式：</strong></p>
+                        <ul style="margin-left:20px;margin-bottom:10px;">
+                            <li>第一行自动作为文章标题</li>
+                            <li>标题后写 <code>作者：xxx</code> 自动识别作者</li>
+                            <li>行首 <code>##</code> 自动转为小标题</li>
+                        </ul>
+                        <p><strong>Markdown文件：</strong> 自动提取 <code># 标题</code> 或 <code>## 标题</code> 作为文章标题</p>
                         <p><strong>发布方式：</strong> 配置 GitHub Token 后可点击「直接发布」自动提交到仓库</p>
                     </div>
                 </div>
@@ -1198,6 +1202,8 @@
         }
 
         // 读取文件内容（支持 txt/md/html/docx）
+        // 对于 Word 文档，返回对象 {isWord: true, title, content, author}
+        // 对于普通文件，返回字符串 content
         function readFile(file) {
             return new Promise((resolve, reject) => {
                 // 如果是 docx 文件，使用 mammoth 解析
@@ -1207,13 +1213,20 @@
                         const arrayBuffer = e.target.result;
                         mammoth.convertToHtml({ arrayBuffer: arrayBuffer }, {
                             styleMap: [
-                                "p[style-name='Heading 1'] => h3",
-                                "p[style-name='Heading 2'] => h3",
-                                "p[style-name='Heading 3'] => h3",
-                                "code => pre:has(> code)"
+                                "p[style-name='Heading 1'] => p",
+                                "p[style-name='Heading 2'] => p",
+                                "p[style-name='Heading 3'] => p",
+                                "p[style-name='Heading 4'] => p",
+                                "p[style-name='Heading 5'] => p",
+                                "p[style-name='Heading 6'] => p"
                             ]
                         })
-                        .then(result => resolve(result.value))
+                        .then(result => {
+                            const html = result.value;
+                            // 处理 Word 文档：提取第一行为标题，提取作者
+                            const processed = processWordContent(html);
+                            resolve(processed);
+                        })
                         .catch(err => reject(err));
                     };
                     reader.onerror = (e) => reject(e);
@@ -1228,6 +1241,80 @@
             });
         }
 
+        // 处理 Word 文档内容：提取标题、作者，处理小标题
+        function processWordContent(html) {
+            // 将 HTML 按段落分割
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = html;
+            const paragraphs = Array.from(tempDiv.querySelectorAll('p'));
+            
+            let title = '';
+            let author = '';
+            let contentStartIndex = 0;
+            
+            // 第一行作为标题（跳过空段落）
+            for (let i = 0; i < paragraphs.length; i++) {
+                const text = paragraphs[i].textContent.trim();
+                if (text) {
+                    title = text;
+                    contentStartIndex = i + 1;
+                    break;
+                }
+            }
+            
+            // 在标题之后寻找作者
+            for (let i = contentStartIndex; i < paragraphs.length; i++) {
+                const text = paragraphs[i].textContent.trim();
+                if (!text) continue;
+                
+                // 匹配 "作者：xxx" 或 "作者: xxx"
+                const authorMatch = text.match(/^作者\s*[：:]\s*(.+)$/);
+                if (authorMatch) {
+                    author = authorMatch[1].trim();
+                    contentStartIndex = i + 1;
+                    break;
+                }
+                
+                // 如果遇到了非作者的内容，停止查找
+                if (text.length > 20 || !text.includes('作者')) {
+                    break;
+                }
+            }
+            
+            // 处理剩余内容，将 ## 开头的行转为小标题
+            const contentParagraphs = [];
+            for (let i = contentStartIndex; i < paragraphs.length; i++) {
+                const p = paragraphs[i];
+                let text = p.textContent.trim();
+                
+                if (!text) {
+                    contentParagraphs.push('<p></p>');
+                    continue;
+                }
+                
+                // 检查是否是 ## 小标题
+                if (text.startsWith('##')) {
+                    // 移除 ## 并设为 h4
+                    const subtitle = text.replace(/^##+\s*/, '').trim();
+                    contentParagraphs.push(`<h4>${subtitle}</h4>`);
+                } else if (text.startsWith('#')) {
+                    // 一级标题，设为 h3
+                    const subtitle = text.replace(/^#+\s*/, '').trim();
+                    contentParagraphs.push(`<h3>${subtitle}</h3>`);
+                } else {
+                    // 普通段落，保留原始 HTML
+                    contentParagraphs.push(p.outerHTML);
+                }
+            }
+            
+            return {
+                isWord: true,
+                title: title,
+                author: author,
+                content: contentParagraphs.join('\n')
+            };
+        }
+
         // 转换内容为HTML（支持Markdown简单语法）
         function convertToHTML(content) {
             // 如果已经是HTML，直接返回
@@ -1235,24 +1322,31 @@
                 return content;
             }
             
+            // 先处理特殊标记，避免转义干扰
             let html = content
+                // 代码块 ``` （先处理，避免内部内容被转义）
+                .replace(/```(\w+)?\n([\s\S]*?)```/g, '\x00CODEBLOCK\x00$2\x00ENDCODE\x00')
+                // 行内代码
+                .replace(/`([^`]+)`/g, '\x00INLINE\x00$1\x00ENDINLINE\x00')
+                // 粗体 **text**
+                .replace(/\*\*(.+?)\*\*/g, '\x00BOLD\x00$1\x00ENDBOLD\x00')
                 // 转义HTML特殊字符
                 .replace(/&/g, '&amp;')
                 .replace(/</g, '&lt;')
                 .replace(/>/g, '&gt;')
-                // 标题 ###
-                .replace(/^### (.+)$/gm, '<h3>$1</h3>')
-                // 标题 ##
-                .replace(/^## (.+)$/gm, '<h3>$1</h3>')
-                // 标题 #
-                .replace(/^# (.+)$/gm, '<h3>$1</h3>')
-                // 粗体
-                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-                // 代码块 ```
-                .replace(/```(\w+)?\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>')
-                // 行内代码
-                .replace(/`([^`]+)`/g, '<code>$1</code>')
-                // 换行转段落
+                // 恢复并转换代码块
+                .replace(/\x00CODEBLOCK\x00([\s\S]*?)\x00ENDCODE\x00/g, '<pre><code>$1</code></pre>')
+                // 恢复并转换行内代码
+                .replace(/\x00INLINE\x00([^\x00]+)\x00ENDINLINE\x00/g, '<code>$1</code>')
+                // 恢复并转换粗体
+                .replace(/\x00BOLD\x00([^\x00]+)\x00ENDBOLD\x00/g, '<strong>$1</strong>')
+                // 标题 ### (三级标题)
+                .replace(/^###\s+(.+)$/gm, '<h3>$1</h3>')
+                // 标题 ## (二级标题)
+                .replace(/^##\s+(.+)$/gm, '<h3>$1</h3>')
+                // 标题 # (一级标题，也用h3保持样式一致)
+                .replace(/^#\s+(.+)$/gm, '<h3>$1</h3>')
+                // 段落分隔
                 .replace(/\n\n/g, '</p><p>')
                 .replace(/\n/g, '<br>');
             
@@ -1287,6 +1381,31 @@
             return null;
         }
 
+        // 从内容中提取标题（支持 Word 转换的 HTML 和 Markdown 格式）
+        function extractTitleFromContent(content) {
+            // 首先尝试从 HTML 标签中提取（Word 文档转换后的格式）
+            // 按优先级匹配 <h1>, <h2>, <h3> 标题
+            for (const tag of ['h1', 'h2', 'h3']) {
+                const match = content.match(new RegExp(`<${tag}[^>]*>(.+?)<\\/${tag}>`, 'i'));
+                if (match) {
+                    // 移除标签内的任何内联标签（如 <strong>, <em> 等）
+                    return match[1].replace(/<[^>]*>/g, '').trim();
+                }
+            }
+
+            // 然后尝试 Markdown 格式（纯文本文件）
+            const lines = content.split('\n');
+            for (const line of lines) {
+                const trimmed = line.trim();
+                // 匹配 # 标题 或 ## 标题
+                const match = trimmed.match(/^#{1,2}\s+(.+)$/);
+                if (match) {
+                    return match[1].trim();
+                }
+            }
+            return null;
+        }
+
         // 文件选择事件
         document.getElementById('batch-files').addEventListener('change', async function(e) {
             const files = Array.from(e.target.files);
@@ -1314,8 +1433,14 @@
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
                 try {
-                    const content = await readFile(file);
+                    const fileResult = await readFile(file);
                     const parsed = parseFilename(file.name);
+                    
+                    // 判断是否是 Word 文档返回的对象格式
+                    const isWord = fileResult && typeof fileResult === 'object' && fileResult.isWord;
+                    const content = isWord ? fileResult.content : fileResult;
+                    const wordTitle = isWord ? fileResult.title : null;
+                    const wordAuthor = isWord ? fileResult.author : null;
                     
                     // 优先使用文件名中的分类，否则使用默认分类
                     const catCode = parsed.categoryCode;
@@ -1326,13 +1451,14 @@
                         catInfo.subcategory = catInfo.tag;
                     }
 
-                    const htmlContent = convertToHTML(content);
-                    const description = extractDescription(content);
-                    const codePreview = extractCodePreview(content);
-                    const extractedAuthor = extractAuthor(content);
+                    const htmlContent = isWord ? content : convertToHTML(content);
+                    const description = isWord ? extractDescription(content) : extractDescription(content);
+                    const codePreview = isWord ? '' : extractCodePreview(content);
+                    const extractedAuthor = isWord ? wordAuthor : extractAuthor(content);
+                    const extractedTitle = isWord ? wordTitle : extractTitleFromContent(content);
 
                     const article = {
-                        title: parsed.title,
+                        title: extractedTitle || parsed.title,
                         category: catInfo.category,
                         subcategory: catInfo.subcategory,
                         difficulty: batchDifficulty,
@@ -1352,11 +1478,13 @@
                     batchArticles.push(article);
 
                     // 添加到预览表格
+                    const displayTitle = extractedTitle || parsed.title;
+                    const authorInfo = extractedAuthor ? ` <span style="color:var(--text-muted);font-size:12px;">(${extractedAuthor})</span>` : '';
                     tbody.innerHTML += `
                         <tr>
                             <td>${i + 1}</td>
                             <td>${file.name}</td>
-                            <td>${parsed.title}</td>
+                            <td>${displayTitle}${authorInfo}</td>
                             <td><span class="tag ${catInfo.tagClass}">${catInfo.tag}</span></td>
                             <td>${content.length} 字</td>
                             <td><span style="color:var(--success)"><i class="fas fa-check"></i> 就绪</span></td>

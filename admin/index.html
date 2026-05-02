@@ -1241,7 +1241,19 @@
             });
         }
 
-        // 处理 Word 文档内容：提取标题、作者，处理小标题
+        // 处理段落内的 Markdown 格式（粗体、斜体、行内代码等）
+        function processInlineMarkdown(text) {
+            // 先处理粗体，再处理斜体
+            // 粗体 **text**
+            text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+            // 斜体 *text*（使用临时标记避免冲突）
+            text = text.replace(/(^|[^*])\*([^*]+)\*([^*]|$)/g, '$1<em>$2</em>$3');
+            // 行内代码 `code`
+            text = text.replace(/`([^`]+)`/g, '<code>$1</code>');
+            return text;
+        }
+
+        // 处理 Word 文档内容：提取标题、作者，处理小标题和 Markdown 格式
         function processWordContent(html) {
             // 将 HTML 按段落分割
             const tempDiv = document.createElement('div');
@@ -1252,59 +1264,98 @@
             let author = '';
             let contentStartIndex = 0;
             
-            // 第一行作为标题（跳过空段落）
+            // 第一行作为标题（跳过空段落），同时检查是否包含作者信息
             for (let i = 0; i < paragraphs.length; i++) {
-                const text = paragraphs[i].textContent.trim();
+                let text = paragraphs[i].textContent.trim();
                 if (text) {
-                    title = text;
+                    // 检查标题行是否包含 "作者：" 或 "作者:"
+                    const authorInTitleMatch = text.match(/(.*?)作者\s*[：:]\s*(.+)$/);
+                    if (authorInTitleMatch) {
+                        title = authorInTitleMatch[1].trim();
+                        author = authorInTitleMatch[2].trim();
+                    } else {
+                        title = text;
+                    }
                     contentStartIndex = i + 1;
                     break;
                 }
             }
             
-            // 在标题之后寻找作者
-            for (let i = contentStartIndex; i < paragraphs.length; i++) {
-                const text = paragraphs[i].textContent.trim();
-                if (!text) continue;
-                
-                // 匹配 "作者：xxx" 或 "作者: xxx"
-                const authorMatch = text.match(/^作者\s*[：:]\s*(.+)$/);
-                if (authorMatch) {
-                    author = authorMatch[1].trim();
-                    contentStartIndex = i + 1;
-                    break;
-                }
-                
-                // 如果遇到了非作者的内容，停止查找
-                if (text.length > 20 || !text.includes('作者')) {
-                    break;
+            // 如果标题中没有找到作者，在标题之后寻找作者
+            if (!author) {
+                for (let i = contentStartIndex; i < paragraphs.length; i++) {
+                    const text = paragraphs[i].textContent.trim();
+                    if (!text) continue;
+                    
+                    // 匹配 "作者：xxx" 或 "作者: xxx"
+                    const authorMatch = text.match(/^作者\s*[：:]\s*(.+)$/);
+                    if (authorMatch) {
+                        author = authorMatch[1].trim();
+                        contentStartIndex = i + 1;
+                        break;
+                    }
+                    
+                    // 如果遇到了非作者的内容，停止查找
+                    if (text.length > 20 || !text.includes('作者')) {
+                        break;
+                    }
                 }
             }
             
-            // 处理剩余内容，将 ## 开头的行转为小标题
+            // 处理剩余内容
             const contentParagraphs = [];
+            const listItems = [];
+            let inList = false;
+            
             for (let i = contentStartIndex; i < paragraphs.length; i++) {
                 const p = paragraphs[i];
                 let text = p.textContent.trim();
                 
                 if (!text) {
+                    // 空行，结束列表
+                    if (inList && listItems.length > 0) {
+                        contentParagraphs.push('<ul>' + listItems.join('') + '</ul>');
+                        listItems.length = 0;
+                        inList = false;
+                    }
                     contentParagraphs.push('<p></p>');
                     continue;
                 }
                 
+                // 检查是否是列表项（- 开头或 * 开头）
+                const listMatch = text.match(/^[-\*]\s+(.+)$/);
+                if (listMatch) {
+                    const itemText = processInlineMarkdown(listMatch[1]);
+                    listItems.push(`<li>${itemText}</li>`);
+                    inList = true;
+                    continue;
+                }
+                
+                // 如果不是列表项但有列表在进行，先结束列表
+                if (inList && listItems.length > 0) {
+                    contentParagraphs.push('<ul>' + listItems.join('') + '</ul>');
+                    listItems.length = 0;
+                    inList = false;
+                }
+                
                 // 检查是否是 ## 小标题
                 if (text.startsWith('##')) {
-                    // 移除 ## 并设为 h4
-                    const subtitle = text.replace(/^##+\s*/, '').trim();
+                    const subtitle = processInlineMarkdown(text.replace(/^##+\s*/, '').trim());
                     contentParagraphs.push(`<h4>${subtitle}</h4>`);
                 } else if (text.startsWith('#')) {
                     // 一级标题，设为 h3
-                    const subtitle = text.replace(/^#+\s*/, '').trim();
+                    const subtitle = processInlineMarkdown(text.replace(/^#+\s*/, '').trim());
                     contentParagraphs.push(`<h3>${subtitle}</h3>`);
                 } else {
-                    // 普通段落，保留原始 HTML
-                    contentParagraphs.push(p.outerHTML);
+                    // 普通段落，处理内联 Markdown
+                    const processedText = processInlineMarkdown(text);
+                    contentParagraphs.push(`<p>${processedText}</p>`);
                 }
+            }
+            
+            // 处理末尾可能未结束的列表
+            if (inList && listItems.length > 0) {
+                contentParagraphs.push('<ul>' + listItems.join('') + '</ul>');
             }
             
             return {
